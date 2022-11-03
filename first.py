@@ -26,21 +26,13 @@ from evaluation import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-u_t = torch.LongTensor(train_df.user_id_idx)
-i_t = torch.LongTensor(train_df.item_id_idx) + n_users
-
-train_edge_index = torch.stack((
-  torch.cat([u_t, i_t]),
-  torch.cat([i_t, u_t])
-)).to(device)
-
 latent_dim = 64
-n_layers = 20 
-EPOCHS = 90
+n_layers = 10
+EPOCHS = 40
 BATCH_SIZE = 1024
 DECAY = 0.0001
 LR = 0.005 
-K = 100
+K = 50
 
 def train_and_eval(model, optimizer, train_df):
   loss_list_epoch = []
@@ -60,7 +52,6 @@ def train_and_eval(model, optimizer, train_df):
     
       model.train()
       for batch_idx in range(n_batch):
-          print
 
           optimizer.zero_grad()
 
@@ -105,8 +96,79 @@ def train_and_eval(model, optimizer, train_df):
     ndgc_list
   )
 
+class RecSysGNN(nn.Module):
+  def __init__(
+      self,
+      latent_dim, 
+      num_layers,
+      num_users,
+      num_items,
+      model, 
+      dropout=0.1 # Only used in NGCF
+  ):
+    super(RecSysGNN, self).__init__()
 
-lightgcn = RecSysGNN(
+    assert (model == 'NGCF' or model == 'LightGCN' or model == 'Sheaf'), \
+        'Model must be NGCF or LightGCN or Sheaf'
+    self.model = model
+    self.embedding = nn.Embedding(num_users + num_items, latent_dim)
+
+    if self.model == 'NGCF':
+      self.convs = nn.ModuleList(
+        NGCFConv(latent_dim, dropout=dropout) for _ in range(num_layers)
+      )
+    if self.model == 'LightGCN':
+      self.convs = nn.ModuleList(LightGCNConv() for _ in range(num_layers))
+    
+    if self.model == 'Sheaf':
+      self.convs = nn.ModuleList(SheafConvLayer(num_nodes = 3296445,input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
+
+    self.init_parameters()
+
+
+  def init_parameters(self):
+    if self.model == 'NGCF':
+      nn.init.xavier_uniform_(self.embedding.weight, gain=1)
+    else:
+      nn.init.normal_(self.embedding.weight, std=0.1) 
+
+
+  def forward(self, edge_index):
+    emb0 = self.embedding.weight
+    embs = [emb0]
+
+    emb = emb0
+    if self.model == 'NGCF' or self.model == 'LightGCN':
+      for conv in self.convs:
+        emb = conv(x=emb, edge_index=edge_index)
+        embs.append(emb)
+    else:
+      for conv in self.convs:
+        emb = conv(x=emb)
+        embs.append(emb)
+
+
+    out = (
+      torch.cat(embs, dim=-1) if self.model == 'NGCF' 
+      else torch.mean(torch.stack(embs, dim=0), dim=0)
+    )
+    
+    return emb0, out
+
+
+  def encode_minibatch(self, users, pos_items, neg_items, edge_index):
+    emb0, out = self(edge_index)
+    return (
+        out[users], 
+        out[pos_items], 
+        out[neg_items], 
+        emb0[users],
+        emb0[pos_items],
+        emb0[neg_items]
+    )
+
+
+""" lightgcn = RecSysGNN(
   latent_dim=latent_dim, 
   num_layers=n_layers,
   num_users=n_users,
@@ -117,3 +179,40 @@ lightgcn.to(device)
 
 optimizer = torch.optim.Adam(lightgcn.parameters(), lr=LR)
 light_loss, light_bpr, light_reg, light_recall, light_precision, light_ndcg = train_and_eval(lightgcn, optimizer, train_df)
+print(max(light_precision), max(light_recall), max(light_ndcg)) """
+
+sheafnn = RecSysGNN(
+  latent_dim=latent_dim, 
+  num_layers=n_layers,
+  num_users=n_users,
+  num_items=n_items,
+  model='Sheaf'
+)
+sheafnn.to(device)
+
+optimizer = torch.optim.Adam(sheafnn.parameters(), lr=LR)
+sheafnn_loss, sheafnn_bpr, sheafnn_reg, sheafnn_recall, sheafnn_precision, sheafnn_ndcg = train_and_eval(sheafnn, optimizer, train_df)
+epoch_list = [(i+1) for i in range(EPOCHS)]
+plt.plot(epoch_list, sheafnn_ndcg, label='nDCG')
+
+plt.xlabel('Epoch')
+plt.ylabel('nDCG')
+plt.legend()
+
+plt.plot(epoch_list, sheafnn_loss, label='Total Training Loss')
+plt.plot(epoch_list, sheafnn_bpr, label='BPR Training Loss')
+plt.plot(epoch_list, sheafnn_reg, label='Reg Training Loss')
+
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.plot(epoch_list, sheafnn_recall, label='Recall')
+plt.plot(epoch_list, sheafnn_precision, label='Precision')
+plt.xlabel('Epoch')
+plt.ylabel('Metrics')
+plt.legend()
+
+print(max(sheafnn_precision))
+print(max(sheafnn_recall))
+print(max(sheafnn_ndcg))
