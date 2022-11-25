@@ -199,7 +199,6 @@ class RecSysGNN(nn.Module):
       self.convs = nn.ModuleList(LightGCNConv() for _ in range(num_layers))
     
     if self.model == 'Sheaf':
-      print(number_of_nodes)
       self.convs = nn.ModuleList(SheafConvLayer(num_nodes = number_of_nodes,input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
 
     self.init_parameters()

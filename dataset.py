@@ -54,7 +54,6 @@ n_users = train_df['user_id_idx'].nunique()
 n_items = train_df['item_id_idx'].nunique()
 
 number_of_nodes = n_users + n_items
-print(number_of_nodes)
 
 ## Minibatch Sampling
 
@@ -96,4 +95,3 @@ train_edge_index = torch.stack((
   torch.cat([u_t, i_t]),
   torch.cat([i_t, u_t])
 )).to(device)
-print(len(test_df))
