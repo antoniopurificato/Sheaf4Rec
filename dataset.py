@@ -19,7 +19,7 @@ else:
   sep = "::"
 
 columns_name=['user_id','item_id','rating','timestamp']
-df = pd.read_csv(file_name,sep=sep,names=columns_name)
+df = pd.read_csv(file_name,sep=sep,names=columns_name, engine='python')
 
 #I only want to use high ratings as interactions
 #in order to predict which movies a user will enjoy watching next.

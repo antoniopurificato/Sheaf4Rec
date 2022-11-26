@@ -30,7 +30,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, help='Seed')
 parser.add_argument('--epochs', type=int, help='Number of epochs')
 parser.add_argument('--dataset', type=str, choices = ['ml-100k', 'ml-1m','ml-20m'], help='Choice of the dataset')
-parser.add_argument('--K', type=int, help='Value of K')
+parser.add_argument('--K1', type=int, help='Value of K')
+parser.add_argument('--K2', type=int, help='Value of K')
 parser.add_argument('--run_name', type=str, help = 'Name of the run for Wandb')
 args = parser.parse_args()
 
@@ -42,7 +43,8 @@ SEED = args.seed
 BATCH_SIZE = 1024
 DECAY = 0.0001
 LR = 0.005 
-K = args.K
+K1 = args.K1
+K2 = args.K2
 DATASET = args.dataset
 
 wandb.init(
@@ -57,7 +59,6 @@ wandb.init(
       "dataset": "MovieLens",
       "epochs": EPOCHS,
       "seed": SEED,
-      "K":K,
       })
 
 torch.manual_seed(args.seed)
@@ -67,10 +68,13 @@ def train_and_eval(model, optimizer, train_df):
   loss_list_epoch = []
   bpr_loss_list_epoch = []
   reg_loss_list_epoch = []
-  ndgc_list = []
-
-  recall_list = []
-  precision_list = []
+  
+  ndgc_list1 = []
+  ndgc_list2 = []
+  recall_list1 = []
+  precision_list1 = []
+  recall_list2 = []
+  precision_list2 = []
 
   for epoch in tqdm(range(EPOCHS)): 
       n_batch = int(len(train)/BATCH_SIZE)
@@ -80,7 +84,7 @@ def train_and_eval(model, optimizer, train_df):
       reg_loss_list = []
     
       model.train()
-      for batch_idx in range(n_batch):
+      for batch_idx in tqdm(range(n_batch)):
 
           optimizer.zero_grad()
 
@@ -104,30 +108,45 @@ def train_and_eval(model, optimizer, train_df):
       with torch.no_grad():
           _, out = model(train_edge_index)
           final_user_Embed, final_item_Embed = torch.split(out, (n_users, n_items))
-          test_topK_recall,  test_topK_precision, ndgc = get_metrics(
-            final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K
+          
+          test_topK_recall_1,  test_topK_precision_1, ndgc_1 = get_metrics(
+            final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K1
           )
 
-          wandb.log({"Recall": test_topK_recall, 
-                       "Precision": test_topK_precision,
-                       "NDGC":round(np.mean(ndgc),4),
-                       "Loss":round(np.mean(final_loss_list),4)})
+          test_topK_recall_2,  test_topK_precision_2, ndgc_2 = get_metrics(
+            final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K2
+          )
+
+          wandb.log({"Recall@{}".format(K1): test_topK_recall_1, 
+                       "Precision@{}".format(K1): test_topK_precision_1,
+                       "NDGC@{}".format(K1):round(np.mean(ndgc_1),4),
+                        "Recall@{}".format(K2): test_topK_recall_2, 
+                       "Precision@{}".format(K2): test_topK_precision_2,
+                       "NDGC@{}".format(K2):round(np.mean(ndgc_2),4),
+
+                     "Loss":round(np.mean(final_loss_list),4)})
 
       loss_list_epoch.append(round(np.mean(final_loss_list),4))
       bpr_loss_list_epoch.append(round(np.mean(bpr_loss_list),4))
       reg_loss_list_epoch.append(round(np.mean(reg_loss_list),4))
-      ndgc_list.append(round(np.mean(ndgc),4))
+      ndgc_list1.append(round(np.mean(ndgc_1),4))
+      ndgc_list2.append(round(np.mean(ndgc_2),4))
 
-      recall_list.append(round(test_topK_recall,4))
-      precision_list.append(round(test_topK_precision,4))
+      recall_list1.append(round(test_topK_recall_1,4))
+      precision_list1.append(round(test_topK_precision_1,4))
+      recall_list2.append(round(test_topK_recall_2,4))
+      precision_list2.append(round(test_topK_precision_2,4))
 
   return (
     loss_list_epoch, 
     bpr_loss_list_epoch, 
     reg_loss_list_epoch, 
-    recall_list, 
-    precision_list,
-    ndgc_list
+    recall_list1, 
+    precision_list1,
+    ndgc_list1,
+    recall_list2, 
+    precision_list2,
+    ndgc_list2
   )
 
 class RecSysGNN(nn.Module):
@@ -212,5 +231,11 @@ sheafnn = RecSysGNN(
 sheafnn.to(device)
 
 optimizer = torch.optim.Adam(sheafnn.parameters(), lr=LR)
-sheafnn_loss, sheafnn_bpr, sheafnn_reg, sheafnn_recall, sheafnn_precision, sheafnn_ndcg = train_and_eval(sheafnn, optimizer, train_df)
+sheafnn_loss, sheafnn_bpr, sheafnn_reg, sheafnn_recall1, sheafnn_precision1, sheafnn_ndcg1, sheafnn_recall2, sheafnn_precision2, sheafnn_ndcg2 = train_and_eval(sheafnn, optimizer, train_df)
+
+wandb.log({"Top Recall@{}".format(K1): max(sheafnn_recall1), 
+            "Top Precision@{}".format(K1):  max(sheafnn_precision1),
+              "Top Recall@{}".format(K2): max(sheafnn_recall2), 
+            "Top Precision@{}".format(K2):  max(sheafnn_precision2),
+           })
 wandb.finish()
