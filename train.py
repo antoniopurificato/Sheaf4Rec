@@ -33,11 +33,12 @@ parser.add_argument('--dataset', type=str, choices = ['ml-100k', 'ml-1m','ml-20m
 parser.add_argument('--K1', type=int, help='Value of K')
 parser.add_argument('--K2', type=int, help='Value of K')
 parser.add_argument('--run_name', type=str, help = 'Name of the run for Wandb')
+parser.add_argument('--layers', type=int, help = 'Number of layers')
 args = parser.parse_args()
 
 
 latent_dim = 64
-n_layers = 2
+n_layers = args.layers
 EPOCHS = args.epochs
 SEED = args.seed
 BATCH_SIZE = 1024
@@ -59,6 +60,7 @@ wandb.init(
       "dataset": "MovieLens",
       "epochs": EPOCHS,
       "seed": SEED,
+      "#layers": n_layers,
       })
 
 torch.manual_seed(args.seed)
