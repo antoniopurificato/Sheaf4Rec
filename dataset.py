@@ -54,6 +54,7 @@ n_users = train_df['user_id_idx'].nunique()
 n_items = train_df['item_id_idx'].nunique()
 
 number_of_nodes = n_users + n_items
+print("Number of nodes:" + str(number_of_nodes))
 
 ## Minibatch Sampling
 

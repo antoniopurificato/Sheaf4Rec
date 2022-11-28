@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 
 latent_dim = 64
-n_layers = 10
+n_layers = 2
 EPOCHS = args.epochs
 SEED = args.seed
 BATCH_SIZE = 1024
@@ -149,77 +149,6 @@ def train_and_eval(model, optimizer, train_df):
     ndgc_list2
   )
 
-class RecSysGNN(nn.Module):
-  def __init__(
-      self,
-      latent_dim, 
-      num_layers,
-      num_users,
-      num_items,
-      model, 
-      dropout=0.1 # Only used in NGCF
-  ):
-    super(RecSysGNN, self).__init__()
-
-    assert (model == 'NGCF' or model == 'LightGCN' or model == 'Sheaf'), \
-        'Model must be NGCF or LightGCN or Sheaf'
-    self.model = model
-    self.embedding = nn.Embedding(num_users + num_items, latent_dim)
-
-    if self.model == 'NGCF':
-      self.convs = nn.ModuleList(
-        NGCFConv(latent_dim, dropout=dropout) for _ in range(num_layers)
-      )
-    if self.model == 'LightGCN':
-      self.convs = nn.ModuleList(LightGCNConv() for _ in range(num_layers))
-    
-    if self.model == 'Sheaf':
-      self.convs = nn.ModuleList(SheafConvLayer(num_nodes = 3296445,input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
-
-    self.init_parameters()
-
-
-  def init_parameters(self):
-    if self.model == 'NGCF':
-      nn.init.xavier_uniform_(self.embedding.weight, gain=1)
-    else:
-      nn.init.normal_(self.embedding.weight, std=0.1) 
-
-
-  def forward(self, edge_index):
-    emb0 = self.embedding.weight
-    embs = [emb0]
-
-    emb = emb0
-    if self.model == 'NGCF' or self.model == 'LightGCN':
-      for conv in self.convs:
-        emb = conv(x=emb, edge_index=edge_index)
-        embs.append(emb)
-    else:
-      for conv in self.convs:
-        emb = conv(x=emb)
-        embs.append(emb)
-
-
-    out = (
-      torch.cat(embs, dim=-1) if self.model == 'NGCF' 
-      else torch.mean(torch.stack(embs, dim=0), dim=0)
-    )
-    
-    return emb0, out
-
-
-  def encode_minibatch(self, users, pos_items, neg_items, edge_index):
-    emb0, out = self(edge_index)
-    return (
-        out[users], 
-        out[pos_items], 
-        out[neg_items], 
-        emb0[users],
-        emb0[pos_items],
-        emb0[neg_items]
-    )
-
 
 sheafnn = RecSysGNN(
   latent_dim=latent_dim, 
@@ -231,6 +160,7 @@ sheafnn = RecSysGNN(
 sheafnn.to(device)
 
 optimizer = torch.optim.Adam(sheafnn.parameters(), lr=LR)
+print("Size of Learnable Embedding : ", [x.shape for x in list(sheafnn.parameters())])
 sheafnn_loss, sheafnn_bpr, sheafnn_reg, sheafnn_recall1, sheafnn_precision1, sheafnn_ndcg1, sheafnn_recall2, sheafnn_precision2, sheafnn_ndcg2 = train_and_eval(sheafnn, optimizer, train_df)
 
 wandb.log({"Top Recall@{}".format(K1): max(sheafnn_recall1), 
