@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dataset import * 
 from math import log
+from sklearn.metrics import mean_squared_error
 
 def idcg_k(k):
     res = sum([1.0/log(i+2, 2) for i in range(k)])
@@ -26,6 +27,12 @@ def compute_bpr_loss(users, users_emb, pos_emb, neg_emb, user_emb0,  pos_emb0, n
   bpr_loss = torch.mean(F.softplus(neg_scores - pos_scores))
       
   return bpr_loss, reg_loss
+
+def compute_rmse(users_emb, pos_emb, neg_emb):
+  pos_scores = torch.mul(users_emb, pos_emb).sum(dim=1)
+  neg_scores = torch.mul(users_emb, neg_emb).sum(dim=1)
+  rmse = mean_squared_error(pos_scores.detach().cpu().numpy(),neg_scores.detach().cpu().numpy(),squared = False)
+  return rmse
 
 def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, train_data, test_data, K):
   test_user_ids = torch.LongTensor(test_data['user_id_idx'].unique())

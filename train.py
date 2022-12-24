@@ -109,6 +109,9 @@ def train_and_eval(model, optimizer, train_df):
       model.eval()
       with torch.no_grad():
           _, out = model(train_edge_index)
+          users, pos_items, neg_items = data_loader(train_df, BATCH_SIZE, n_users, n_items)
+          users_emb, pos_emb, neg_emb, _,  _, _ = model.encode_minibatch(users, pos_items, neg_items, train_edge_index)
+
           final_user_Embed, final_item_Embed = torch.split(out, (n_users, n_items))
           
           test_topK_recall_1,  test_topK_precision_1, ndgc_1 = get_metrics(
@@ -118,15 +121,17 @@ def train_and_eval(model, optimizer, train_df):
           test_topK_recall_2,  test_topK_precision_2, ndgc_2 = get_metrics(
             final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K2
           )
+          rmse = compute_rmse(users_emb, pos_emb, neg_emb)
+          #print("AAAA:" + str(compute_rmse(users_emb, pos_emb, neg_emb)))
 
           wandb.log({"Recall@{}".format(K1): test_topK_recall_1, 
-                       "Precision@{}".format(K1): test_topK_precision_1,
-                       "NDGC@{}".format(K1):round(np.mean(ndgc_1),4),
-                        "Recall@{}".format(K2): test_topK_recall_2, 
-                       "Precision@{}".format(K2): test_topK_precision_2,
-                       "NDGC@{}".format(K2):round(np.mean(ndgc_2),4),
-
-                     "Loss":round(np.mean(final_loss_list),4)})
+                      "Precision@{}".format(K1): test_topK_precision_1,
+                      "NDGC@{}".format(K1):round(np.mean(ndgc_1),4),
+                      "Recall@{}".format(K2): test_topK_recall_2, 
+                      "Precision@{}".format(K2): test_topK_precision_2,
+                      "NDGC@{}".format(K2):round(np.mean(ndgc_2),4),
+                      "Loss":round(np.mean(final_loss_list),4),
+                      "RMSE": round(rmse,4)})
 
       loss_list_epoch.append(round(np.mean(final_loss_list),4))
       bpr_loss_list_epoch.append(round(np.mean(bpr_loss_list),4))
