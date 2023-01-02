@@ -5,6 +5,7 @@ import random
 import time
 from math import log, log2
 import matplotlib.pyplot as plt
+import math
 
 import numpy as np
 import pandas as pd
@@ -96,7 +97,7 @@ def train_and_eval(model, optimizer, train_df):
           bpr_loss, reg_loss = compute_bpr_loss(
             users, users_emb, pos_emb, neg_emb, userEmb0,  posEmb0, negEmb0
           )
-          reg_loss = DECAY * reg_loss
+          #reg_loss = DECAY * reg_loss
           final_loss = bpr_loss + reg_loss
 
           final_loss.backward()
@@ -108,9 +109,9 @@ def train_and_eval(model, optimizer, train_df):
 
       model.eval()
       with torch.no_grad():
+          #users, pos_items, neg_items = data_loader(train_df, BATCH_SIZE, n_users, n_items)
+          #users_emb, pos_emb, neg_emb, _,  _, _ = model.encode_minibatch(users, pos_items, neg_items, train_edge_index)
           _, out = model(train_edge_index)
-          users, pos_items, neg_items = data_loader(train_df, BATCH_SIZE, n_users, n_items)
-          users_emb, pos_emb, neg_emb, _,  _, _ = model.encode_minibatch(users, pos_items, neg_items, train_edge_index)
 
           final_user_Embed, final_item_Embed = torch.split(out, (n_users, n_items))
           
@@ -121,17 +122,13 @@ def train_and_eval(model, optimizer, train_df):
           test_topK_recall_2,  test_topK_precision_2, ndgc_2 = get_metrics(
             final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K2
           )
-          rmse = compute_rmse(users_emb, pos_emb, neg_emb)
-          #print("AAAA:" + str(compute_rmse(users_emb, pos_emb, neg_emb)))
-
           wandb.log({"Recall@{}".format(K1): test_topK_recall_1, 
                       "Precision@{}".format(K1): test_topK_precision_1,
                       "NDGC@{}".format(K1):round(np.mean(ndgc_1),4),
                       "Recall@{}".format(K2): test_topK_recall_2, 
                       "Precision@{}".format(K2): test_topK_precision_2,
                       "NDGC@{}".format(K2):round(np.mean(ndgc_2),4),
-                      "Loss":round(np.mean(final_loss_list),4),
-                      "RMSE": round(rmse,4)})
+                      "Loss":round(np.mean(final_loss_list),4)})
 
       loss_list_epoch.append(round(np.mean(final_loss_list),4))
       bpr_loss_list_epoch.append(round(np.mean(bpr_loss_list),4))
@@ -167,7 +164,6 @@ sheafnn = RecSysGNN(
 sheafnn.to(device)
 
 optimizer = torch.optim.Adam(sheafnn.parameters(), lr=LR)
-print("Size of Learnable Embedding : ", [x.shape for x in list(sheafnn.parameters())])
 sheafnn_loss, sheafnn_bpr, sheafnn_reg, sheafnn_recall1, sheafnn_precision1, sheafnn_ndcg1, sheafnn_recall2, sheafnn_precision2, sheafnn_ndcg2 = train_and_eval(sheafnn, optimizer, train_df)
 
 wandb.log({"Top Recall@{}".format(K1): max(sheafnn_recall1), 

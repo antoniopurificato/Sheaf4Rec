@@ -6,7 +6,7 @@ from sklearn import preprocessing as pp
 import random
 
 file_name, sep = None, None
-MovieLens_100K = False ##dataset choice
+MovieLens_100K = True ##dataset choice
 PATH = '/home/antoniopurificato/Datasets'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -54,7 +54,6 @@ n_users = train_df['user_id_idx'].nunique()
 n_items = train_df['item_id_idx'].nunique()
 
 number_of_nodes = n_users + n_items
-print("Number of nodes:" + str(number_of_nodes))
 
 ## Minibatch Sampling
 

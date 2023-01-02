@@ -84,7 +84,10 @@ class SheafConvLayer(nn.Module):
     """
     def __init__(self, num_nodes, input_dim, output_dim, edge_index, step_size):
         super(SheafConvLayer, self).__init__()
-        self.num_nodes = 9640 ##To be fixed
+        if not MovieLens_100K:
+          self.num_nodes = 9640 ##To be fixed or 2489
+        else:
+          self.num_nodes = 2489
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.edge_index = edge_index.to(device)

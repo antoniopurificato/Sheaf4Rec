@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dataset import * 
-from math import log
+from math import log,log2
 from sklearn.metrics import mean_squared_error
 
 def idcg_k(k):
@@ -28,11 +28,6 @@ def compute_bpr_loss(users, users_emb, pos_emb, neg_emb, user_emb0,  pos_emb0, n
       
   return bpr_loss, reg_loss
 
-def compute_rmse(users_emb, pos_emb, neg_emb):
-  pos_scores = torch.mul(users_emb, pos_emb).sum(dim=1)
-  neg_scores = torch.mul(users_emb, neg_emb).sum(dim=1)
-  rmse = mean_squared_error(pos_scores.detach().cpu().numpy(),neg_scores.detach().cpu().numpy(),squared = False)
-  return rmse
 
 def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, train_data, test_data, K):
   test_user_ids = torch.LongTensor(test_data['user_id_idx'].unique())
@@ -75,13 +70,16 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, train_data, te
   for i in range(len(topk_relevance_indices_df['top_rlvnt_itm'])):
     ideal_relevance.insert(i, sorted(topk_relevance_indices_df['top_rlvnt_itm'][i],reverse = True))
 
-  res = 0
-  for user_id in range(len(test_interacted_items['item_id_idx'])):
-    k = min(K, len(test_interacted_items['item_id_idx'][user_id]))
-    idcg = idcg_k(k)
-    dcg_k = sum([int(topk_relevance_indices_df['top_rlvnt_itm'][user_id][j] in set(test_interacted_items['item_id_idx'][user_id])) / log(j+2, 2) for j in range(K)])
-    res += dcg_k / idcg
-  ndcg_list.append(res / float(len(test_interacted_items['item_id_idx'])))
+  dcg = 0
+  idcg = 0
+  for a in range(len(topk_relevance_indices_df['top_rlvnt_itm'])):
+    for k in range(1,K+1):
+      rel_k = topk_relevance_indices_df['top_rlvnt_itm'][a][k-1]
+      ideal_rel_k = sorted(topk_relevance_indices_df['top_rlvnt_itm'][a],reverse = True)[k-1]
+      dcg += rel_k/log2(k+1)
+      idcg += ideal_rel_k/log2(k+1)
+      ndcg = dcg/idcg
+      ndcg_list.append(ndcg)
   
   #for element in range(len(ideal_relevance)):
     #app = []
