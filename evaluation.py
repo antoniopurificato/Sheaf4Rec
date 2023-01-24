@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from dataset import * 
 from math import log,log2
 from sklearn.metrics import mean_squared_error
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 def idcg_k(k):
     res = sum([1.0/log(i+2, 2) for i in range(k)])

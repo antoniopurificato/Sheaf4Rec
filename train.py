@@ -26,7 +26,7 @@ from dataset import *
 from models import *
 from evaluation import *
 import argparse
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, help='Seed')
 parser.add_argument('--epochs', type=int, help='Number of epochs')
