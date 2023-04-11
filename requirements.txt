@@ -1,0 +1,8 @@
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==1.13.1+cu117
+torchvision==0.14.1+cu117
+matplotlib==3.7.1
+pandas==2.0.0
+tqdm==4.64.1
+torch-geometric==2.3.0
+wandb==0.13.9
