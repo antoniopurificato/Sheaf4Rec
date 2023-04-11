@@ -20,3 +20,10 @@ pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -
 ```
 
 When you change the GPU you need to change every time the GPU id in every file (sorry for that). To select between MovieLens 100k and 1M you have to change the boolean variable in the `dataset.py` script (sorry also for that).
+
+To run an experiment:
+```
+python3 train.py --seed [SEED] --epochs [NUMER OF EPOCHS] --dataset [ml-100k] --K1 [20] --K2 [50] --run_name [RUN NAME] --layers [NUMBER OF LAYERS] --gpu_id 2 [ID OF THE GPU]
+```
+
+The `dataset` field must be inserted but is not useful. I use `K1` and `K2` to see the performance with different values of K.
