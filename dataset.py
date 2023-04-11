@@ -4,10 +4,11 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing as pp
 import random
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 file_name, sep = None, None
-MovieLens_100K = False ##dataset choice
+MovieLens_100K = True ##dataset choice
 PATH = '/home/antpur/projects/Datasets'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -18,7 +19,6 @@ if MovieLens_100K:
 else:
   file_name = "ml-1m/ratings.dat"
   sep = "::"
-
 columns_name=['user_id','item_id','rating','timestamp']
 df = pd.read_csv(file_name,sep=sep,names=columns_name, engine='python')
 

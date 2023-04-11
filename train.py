@@ -26,7 +26,7 @@ from dataset import *
 from models import *
 from evaluation import *
 import argparse
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, help='Seed')
 parser.add_argument('--epochs', type=int, help='Number of epochs')
@@ -35,9 +35,10 @@ parser.add_argument('--K1', type=int, help='Value of K')
 parser.add_argument('--K2', type=int, help='Value of K')
 parser.add_argument('--run_name', type=str, help = 'Name of the run for Wandb')
 parser.add_argument('--layers', type=int, help = 'Number of layers')
+parser.add_argument('--gpu_id', type=str, default= '2', help = 'Id of the gpu')
 args = parser.parse_args()
 
-
+os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 latent_dim = 64
 n_layers = args.layers
 EPOCHS = args.epochs
@@ -50,11 +51,9 @@ K2 = args.K2
 DATASET = args.dataset
 
 wandb.init(
-      # Set the project where this run will be logged
-      project="SheafNN", 
-      # We pass a run name (otherwise it’ll be randomly assigned, like sunshine-lollypop-10)
+      entity = "sheaf_nn_recommenders",
+      project="Recommendation", 
       name=args.run_name, 
-      # Track hyperparameters and run metadata
       config={
       "learning_rate": LR,
       "architecture": "SheafNN",

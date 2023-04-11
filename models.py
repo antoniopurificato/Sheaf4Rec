@@ -11,6 +11,7 @@ from torch_scatter import scatter_mean, scatter_max, scatter_sum, scatter_add
 from dataset import *
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
+
 def sym_norm_adj(A):
     #### Create the symmetric normalised adjacency from the dense adj matrix A
     # This should return a sparse adjacency matrix. (torch sparse coo tensor format)
