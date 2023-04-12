@@ -1,0 +1,24 @@
+program: train.py
+method: bayes
+metric:
+  gal: minimize
+  name: Loss
+parameters:
+  learning_rate:
+    distribution: categorical
+    values: [0.1, 0.01, 0.001]
+  architecture:
+    values:
+      - SheafNN
+    distribution: categorical
+  dataset:
+    values:
+      - ml-100k
+    distribution: categorical
+  layers:
+    max: 10
+    min: 3
+    distribution: int_uniform
+  epochs:
+    values: [100]
+    distribution: categoricalo
