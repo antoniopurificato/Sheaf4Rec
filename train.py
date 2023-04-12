@@ -28,14 +28,16 @@ from evaluation import *
 import argparse
 
 parser = argparse.ArgumentParser()
-#parser.add_argument('--seed', type=int, help='Seed')
 parser.add_argument('--epochs', type=int, help='Number of epochs')
-parser.add_argument('--dataset', type=str, choices = ['ml-100k', 'ml-1m','ml-20m'], help='Choice of the dataset')
-parser.add_argument('--K1', type=int, help='Value of K')
-parser.add_argument('--K2', type=int, help='Value of K')
+parser.add_argument('--dataset', type=str, default='ml-100k', choices = ['ml-100k', 'ml-1m','ml-20m'], help='Choice of the dataset')
+parser.add_argument('--K1', type=int, default= 10, help='Value of K')
+parser.add_argument('--K2', type=int, default= 100, help='Value of K')
 parser.add_argument('--run_name', type=str, help = 'Name of the run for Wandb')
 parser.add_argument('--layers', type=int, help = 'Number of layers')
+parser.add_argument('--architecture', type=str, default= 'SheafNN', help = 'Choose the architecture')
 parser.add_argument('--gpu_id', type=str, default= '2', help = 'Id of the gpu')
+parser.add_argument('--learning_rate', default=0.001, type=float)
+
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
@@ -55,12 +57,12 @@ wandb.init(
       project="Recommendation", 
       name=args.run_name, 
       config={
-      "learning_rate": LR,
-      "architecture": "SheafNN",
-      "dataset": "MovieLens",
-      "epochs": EPOCHS,
+      "learning_rate": args.learning_rate,
+      "architecture": args.architecture,
+      "dataset": args.dataset,
+      "epochs": args.epochs,
       "seed": SEED,
-      "#layers": n_layers,
+      "layers": args.layers,
       })
 
 torch.manual_seed(SEED)
