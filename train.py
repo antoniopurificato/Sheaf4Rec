@@ -28,7 +28,7 @@ from evaluation import *
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--seed', type=int, help='Seed')
+#parser.add_argument('--seed', type=int, help='Seed')
 parser.add_argument('--epochs', type=int, help='Number of epochs')
 parser.add_argument('--dataset', type=str, choices = ['ml-100k', 'ml-1m','ml-20m'], help='Choice of the dataset')
 parser.add_argument('--K1', type=int, help='Value of K')
@@ -42,7 +42,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 latent_dim = 64
 n_layers = args.layers
 EPOCHS = args.epochs
-SEED = args.seed
+SEED = 42
 BATCH_SIZE = 1024
 DECAY = 0.0001
 LR = 0.005 
@@ -63,7 +63,7 @@ wandb.init(
       "#layers": n_layers,
       })
 
-torch.manual_seed(args.seed)
+torch.manual_seed(SEED)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train_and_eval(model, optimizer, train_df):

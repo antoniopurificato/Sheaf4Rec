@@ -5,12 +5,12 @@ Before running the code you have to download the datasets and to insert them in 
 After you clone this repo you have to create a `conda` environment.
 
 ```
-conda create -n test_env python=3.8 && conda activate test_env && conda install pip
+conda create -n sheaf_rec python=3.8 && conda activate sheaf_rec && conda install pip
 ```
 
 Move the current directory to this repository and install the required packages:
 ```
-cd SheafNNS_Recommender_System && pip install -r requirements.txt
+conda activate sheaf_rec && pip install -r requirements.txt
 ```
 
 Run the following command:
@@ -23,7 +23,7 @@ When you change the GPU you need to change every time the GPU id in every file (
 
 To run an experiment:
 ```
-python3 train.py --seed [SEED] --epochs [NUMER OF EPOCHS] --dataset [ml-100k] --K1 [20] --K2 [50] --run_name [RUN NAME] --layers [NUMBER OF LAYERS] --gpu_id 2 [ID OF THE GPU]
+python3 train.py --epochs [NUMER OF EPOCHS] --dataset [ml-100k] --K1 [20] --K2 [50] --run_name [RUN NAME] --layers [NUMBER OF LAYERS] --gpu_id 2 [ID OF THE GPU]
 ```
 
 The `dataset` field must be inserted but is not useful. I use `K1` and `K2` to see the performance with different values of K.
