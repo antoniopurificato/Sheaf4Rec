@@ -27,3 +27,8 @@ python3 train.py --seed [SEED] --epochs [NUMER OF EPOCHS] --dataset [ml-100k] --
 ```
 
 The `dataset` field must be inserted but is not useful. I use `K1` and `K2` to see the performance with different values of K.
+
+You can use this command line to have a first simple run:
+```
+python3 train.py --seed 42 --epochs 3 --dataset ml-100k --K1 10 --K2 100 --run_name First_attempt --layers 1 --gpu_id 2
+```
