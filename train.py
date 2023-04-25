@@ -26,18 +26,20 @@ from dataset import *
 from models import *
 from evaluation import *
 import argparse
+from datetime import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', type=int, help='Number of epochs')
-parser.add_argument('--dataset', type=str, default='ml-100k', choices = ['ml-100k', 'ml-1m','ml-20m'], help='Choice of the dataset')
+parser.add_argument('--dataset', type=str, default='ml-100k', choices = ['ml-100k', 'ml-1m'], help='Choice of the dataset')
 parser.add_argument('--K1', type=int, default= 10, help='Value of K')
 parser.add_argument('--K2', type=int, default= 100, help='Value of K')
 parser.add_argument('--run_name', type=str, help = 'Name of the run for Wandb')
 parser.add_argument('--layers', type=int, help = 'Number of layers')
 parser.add_argument('--architecture', type=str, default= 'SheafNN', help = 'Choose the architecture')
-parser.add_argument('--gpu_id', type=str, default= '2', help = 'Id of the gpu')
-parser.add_argument('--learning_rate', default=0.001, type=float)
-
+parser.add_argument('--gpu_id', type=str, default= '0', help = 'Id of the gpu')
+parser.add_argument('--learning_rate', default=0.001, type=float, help = 'Learning rate')
+parser.add_argument('--entity_name', default='sheaf_nn_recommenders', type=str, help = 'Entity name for shared projects in Wandb')
+parser.add_argument('--project_name', default='Recommendation', type=str, help = 'Project name for Wandb')
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
@@ -110,6 +112,7 @@ def train_and_eval(model, optimizer, train_df):
 
       model.eval()
       with torch.no_grad():
+          initial_time = datetime.now()
           #users, pos_items, neg_items = data_loader(train_df, BATCH_SIZE, n_users, n_items)
           #users_emb, pos_emb, neg_emb, _,  _, _ = model.encode_minibatch(users, pos_items, neg_items, train_edge_index)
           _, out = model(train_edge_index)
@@ -119,6 +122,7 @@ def train_and_eval(model, optimizer, train_df):
           test_topK_recall_1,  test_topK_precision_1, ndgc_1 = get_metrics(
             final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K1
           )
+          print("TIME: " + str(datetime.now() - initial_time))
 
           test_topK_recall_2,  test_topK_precision_2, ndgc_2 = get_metrics(
             final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K2

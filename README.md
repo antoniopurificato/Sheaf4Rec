@@ -1,6 +1,19 @@
 # Setup
 
-Before running the code you have to download the datasets and to insert them in the right folder. To have the datasets you need to contact me.
+Before running the code you have to download the datasets and to insert them in the right folder.
+```
+mkdir Datasets && cd Datasets
+```
+
+To download MovieLens 100k:
+```
+wget https://files.grouplens.org/datasets/movielens/ml-100k.zip && unzip ml-100k.zip
+```
+
+To download MovieLens 1M:
+```
+wget https://files.grouplens.org/datasets/movielens/ml-1m.zip && unzip ml-1m.zip
+```
 
 After you clone this repo you have to create a `conda` environment.
 

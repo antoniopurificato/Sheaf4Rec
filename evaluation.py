@@ -96,5 +96,4 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, train_data, te
       #ndcg = dcg / idcg
       #app.append(ndcg)
     #ndcg_list.insert(element,app)
-  
   return metrics_df['recall'].mean(), metrics_df['precision'].mean(), ndcg_list

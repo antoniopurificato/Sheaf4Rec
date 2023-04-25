@@ -8,7 +8,7 @@ import random
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 file_name, sep = None, None
-MovieLens_100K = True ##dataset choice
+MovieLens_100K = False ##dataset choice
 PATH = '/home/antpur/projects/Datasets'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
