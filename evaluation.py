@@ -63,11 +63,8 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, train_data, te
   topk_relevance_indices_df['user_ID'] = topk_relevance_indices_df.index
   topk_relevance_indices_df['top_rlvnt_itm'] = topk_relevance_indices_df[['top_indx_'+str(x+1) for x in range(K)]].values.tolist()
   topk_relevance_indices_df = topk_relevance_indices_df[['user_ID','top_rlvnt_itm']]
-  #print("PREDICTION: " + str(topk_relevance_indices_df[['user_ID','top_rlvnt_itm']])) ##THEY ARE PREDICTED
-  #print(test_data)
 
-  # measure overlap between recommended (top-scoring) and held-out user-item 
-  # interactions
+  # measure overlap between recommended (top-scoring) and held-out user-item interactions
   test_interacted_items = test_data.groupby('user_id_idx')['item_id_idx'].apply(list).reset_index()
   #print("TEST: " + str(test_interacted_items['item_id_idx']))
   metrics_df = pd.merge(test_interacted_items,topk_relevance_indices_df, how= 'left', left_on = 'user_id_idx',right_on = ['user_ID'])
@@ -92,16 +89,4 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, train_data, te
       ndcg = dcg/idcg
       ndcg_list.append(ndcg)
   
-  #for element in range(len(ideal_relevance)):
-    #app = []
-    #for s in range(1,K+1):
-      #rel_k = topk_relevance_indices_df['top_rlvnt_itm'][element][s-1]
-      #print("REL_K: " + str(rel_k))
-      #ideal_rel_k = ideal_relevance[element][s-1]
-      #print("IDEAL REL_K: " + str(ideal_rel_k))
-      #dcg += rel_k / log2(1 + s)
-      #idcg += ideal_rel_k / log2(1 + s)
-      #ndcg = dcg / idcg
-      #app.append(ndcg)
-    #ndcg_list.insert(element,app)
   return metrics_df['recall'].mean(), metrics_df['precision'].mean(), ndcg_list

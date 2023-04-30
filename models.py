@@ -45,8 +45,9 @@ class SheafConvLayer(nn.Module):
     """
     def __init__(self, num_nodes, input_dim, output_dim, edge_index, step_size):
         super(SheafConvLayer, self).__init__()
+        #Number of nodes taken as input from SheafNN
         if not MovieLens_100K:
-          self.num_nodes = 9640 ##To be fixed or 2489
+          self.num_nodes = 9640 
         else:
           self.num_nodes = 2489
         self.input_dim = input_dim
@@ -160,6 +161,7 @@ class RecSysGNN(nn.Module):
 
 
   def forward(self, edge_index):
+    # My network takes as input the previously created embedding
     emb0 = self.embedding.weight
     embs = [emb0]
 

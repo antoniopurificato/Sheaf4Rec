@@ -16,7 +16,7 @@ params = retrieve_params()
 os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
 
 file_name, sep = None, None
-MovieLens_100K = params['dataset_name']#False ##dataset choice
+MovieLens_100K = params['dataset_name'] #dataset choice
 PATH = '/home/antpur/projects/Datasets'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -30,7 +30,7 @@ if MovieLens_100K == 'ml-1m':
 columns_name=['user_id','item_id','rating','timestamp']
 df = pd.read_csv(file_name,sep=sep,names=columns_name, engine='python')
 
-#I only want to use high ratings as interactions
+#I only want to use high ratings as interactions 
 #in order to predict which movies a user will enjoy watching next.
 df = df[df['rating']>=3]
 
@@ -67,7 +67,7 @@ number_of_nodes = n_users + n_items
 ## Minibatch Sampling
 
 #I need to add `n_usr` to the sampled positive and negative items,
-#since each node must have a unique id when using PyG.
+#since each node must have a unique id when using Pytorch.
 
 def data_loader(data, batch_size, n_usr, n_itm):
 
@@ -100,6 +100,7 @@ def data_loader(data, batch_size, n_usr, n_itm):
 u_t = torch.LongTensor(train_df.user_id_idx)
 i_t = torch.LongTensor(train_df.item_id_idx) + n_users
 
+#I create the edge index by stacking the two tensors
 train_edge_index = torch.stack((
   torch.cat([u_t, i_t]),
   torch.cat([i_t, u_t])

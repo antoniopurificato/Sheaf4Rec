@@ -29,14 +29,13 @@ from datetime import datetime
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', type=int, help='Number of epochs')
 parser.add_argument('--dataset', type=str, default='ml-100k', choices = ['ml-100k', 'ml-1m'], help='Choice of the dataset')
-parser.add_argument('--K1', type=int, default= 10, help='Value of K')
-parser.add_argument('--K2', type=int, default= 100, help='Value of K')
-parser.add_argument('--run_name', type=str, help = 'Name of the run for Wandb')
+parser.add_argument('--K1', type=int, default= 10, help='First value of K')
+parser.add_argument('--K2', type=int, default= 100, help='Second value of K')
+parser.add_argument('--run_name', type=str, help = 'Name of the run for logging')
 parser.add_argument('--layers', type=int, help = 'Number of layers')
-parser.add_argument('--architecture', type=str, default= 'SheafNN', help = 'Choose the architecture')
 parser.add_argument('--gpu_id', type=str, default= '0', help = 'Id of the gpu')
 parser.add_argument('--learning_rate', default=0.001, type=float, help = 'Learning rate')
-parser.add_argument('--entity_name', default='sheaf_nn_recommenders', type=str, help = 'Entity name for shared projects in Wandb')
+parser.add_argument('--entity_name', default='sheaf_nn_recommenders', type=str, help = 'Entity name for shared projects in Wandb. If there is no shared project, default there is no shared project (0).')
 parser.add_argument('--project_name', default='Recommendation', type=str, help = 'Project name for Wandb')
 args = parser.parse_args()
 
@@ -47,7 +46,7 @@ EPOCHS = args.epochs
 SEED = 42
 BATCH_SIZE = 1024
 DECAY = 0.0001
-LR = 0.005 
+LR = args.learning_rate
 K1 = args.K1
 K2 = args.K2
 DATASET = args.dataset
@@ -64,12 +63,11 @@ from models import *
 from evaluation import *
 
 wandb.init(
-      entity = "sheaf_nn_recommenders",
-      project="Recommendation", 
+      entity = args.entity_name if args.entity_name != '0' else None ,
+      project= args.project_name, 
       name=args.run_name, 
       config={
       "learning_rate": args.learning_rate,
-      "architecture": args.architecture,
       "dataset": args.dataset,
       "epochs": args.epochs,
       "seed": SEED,
@@ -80,6 +78,12 @@ torch.manual_seed(SEED)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train_and_eval(model, optimizer, train_df):
+  '''
+  model: input of the training methos
+  optimizer: selected optimizer, to compute the BPR loss and the evaluation metrics
+  train_df: data taken as input
+  This is the main method of this project. It trains the network and then computes all the metrics.
+  '''
   loss_list_epoch = []
   bpr_loss_list_epoch = []
   reg_loss_list_epoch = []
@@ -109,7 +113,6 @@ def train_and_eval(model, optimizer, train_df):
           bpr_loss, reg_loss = compute_bpr_loss(
             users, users_emb, pos_emb, neg_emb, userEmb0,  posEmb0, negEmb0
           )
-          #reg_loss = DECAY * reg_loss
           final_loss = bpr_loss + reg_loss
 
           final_loss.backward()
@@ -122,8 +125,6 @@ def train_and_eval(model, optimizer, train_df):
       model.eval()
       with torch.no_grad():
           initial_time = datetime.now()
-          #users, pos_items, neg_items = data_loader(train_df, BATCH_SIZE, n_users, n_items)
-          #users_emb, pos_emb, neg_emb, _,  _, _ = model.encode_minibatch(users, pos_items, neg_items, train_edge_index)
           _, out = model(train_edge_index)
 
           final_user_Embed, final_item_Embed = torch.split(out, (n_users, n_items))
@@ -131,7 +132,7 @@ def train_and_eval(model, optimizer, train_df):
           test_topK_recall_1,  test_topK_precision_1, ndgc_1 = get_metrics(
             final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K1
           )
-          print("TIME: " + str(datetime.now() - initial_time))
+          recommendation_time = str(datetime.now() - initial_time)
 
           test_topK_recall_2,  test_topK_precision_2, ndgc_2 = get_metrics(
             final_user_Embed, final_item_Embed, n_users, n_items, train_df, test_df, K2
@@ -142,7 +143,8 @@ def train_and_eval(model, optimizer, train_df):
                       "Recall@{}".format(K2): test_topK_recall_2, 
                       "Precision@{}".format(K2): test_topK_precision_2,
                       "NDGC@{}".format(K2):round(np.mean(ndgc_2),4),
-                      "Loss":round(np.mean(final_loss_list),4)})
+                      "Loss":round(np.mean(final_loss_list),4),
+                      "Recommendation time" : recommendation_time})
 
       loss_list_epoch.append(round(np.mean(final_loss_list),4))
       bpr_loss_list_epoch.append(round(np.mean(bpr_loss_list),4))
