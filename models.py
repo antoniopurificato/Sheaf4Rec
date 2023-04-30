@@ -1,5 +1,6 @@
 from torch_geometric.nn.conv import MessagePassing
 import torch
+import pickle
 import torch.nn as nn
 import os
 import torch.nn.functional as F
@@ -9,7 +10,15 @@ from torch_geometric.utils import to_dense_adj
 from torch_scatter import scatter_mean, scatter_max, scatter_sum, scatter_add
 
 from dataset import *
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+
+def retrieve_params():
+    with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
+        params = pickle.load(handle)
+    return params
+
+params = retrieve_params()
+
+os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
 
 
 def sym_norm_adj(A):

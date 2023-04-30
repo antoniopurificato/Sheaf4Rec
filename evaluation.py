@@ -5,8 +5,16 @@ from dataset import *
 from math import log,log2
 from sklearn.metrics import mean_squared_error
 import os
+import pickle
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+def retrieve_params():
+    with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
+        params = pickle.load(handle)
+    return params
+
+params = retrieve_params()
+
+os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
 
 def idcg_k(k):
     res = sum([1.0/log(i+2, 2) for i in range(k)])

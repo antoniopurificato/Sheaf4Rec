@@ -4,19 +4,27 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing as pp
 import random
+import pickle
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+def retrieve_params():
+    with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
+        params = pickle.load(handle)
+    return params
+
+params = retrieve_params()
+
+os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
 
 file_name, sep = None, None
-MovieLens_100K = False ##dataset choice
+MovieLens_100K = params['dataset_name']#False ##dataset choice
 PATH = '/home/antpur/projects/Datasets'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 os.chdir(PATH)
-if MovieLens_100K:
+if MovieLens_100K == 'ml-100k':
   file_name = "ml-100k/u.data"
   sep = "\t"
-else:
+if MovieLens_100K == 'ml-1m':
   file_name = "ml-1m/ratings.dat"
   sep = "::"
 columns_name=['user_id','item_id','rating','timestamp']

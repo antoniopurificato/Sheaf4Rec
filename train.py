@@ -10,6 +10,7 @@ import math
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import pickle
 
 import torch
 import torch.nn as nn
@@ -22,9 +23,6 @@ from torch_scatter import scatter_mean, scatter_max, scatter_sum, scatter_add
 from torch_geometric.utils import to_dense_adj, to_undirected, remove_self_loops
 import wandb
 
-from dataset import *
-from models import *
-from evaluation import *
 import argparse
 from datetime import datetime
 
@@ -53,6 +51,17 @@ LR = 0.005
 K1 = args.K1
 K2 = args.K2
 DATASET = args.dataset
+
+def store_params(gpu_id, dataset_name):
+    params = {'gpu_id' : gpu_id, 'dataset_name': dataset_name}
+    with open(os.getcwd() + '/params.pickle', 'wb') as handle:
+        pickle.dump(params, handle)
+
+store_params(args.gpu_id, args.dataset)
+
+from dataset import *
+from models import *
+from evaluation import *
 
 wandb.init(
       entity = "sheaf_nn_recommenders",
