@@ -13,12 +13,12 @@ def retrieve_params():
 
 params = retrieve_params()
 
-os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
+#os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
 
 file_name, sep = None, None
 MovieLens_100K = params['dataset_name'] #dataset choice
 PATH = '/home/antpur/projects/Datasets'
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:" + str(params['gpu_id']) if torch.cuda.is_available() else "cpu")
 
 os.chdir(PATH)
 if MovieLens_100K == 'ml-100k':
@@ -34,9 +34,11 @@ df = pd.read_csv(file_name,sep=sep,names=columns_name, engine='python')
 #in order to predict which movies a user will enjoy watching next.
 df = df[df['rating']>=3]
 
-#80/20 train-test split.
-train, test = train_test_split(df.values, test_size=0.2, random_state=16)
+#80/10/10 train-val-test split.
+train, test = train_test_split(df.values, test_size=0.2, random_state=params['seed'])
+val, test = train_test_split(test, test_size=0.5, random_state=params['seed'])
 train_df = pd.DataFrame(train, columns=df.columns)
+val_df = pd.DataFrame(val, columns=df.columns)
 test_df = pd.DataFrame(test, columns=df.columns)
 
 #Since I performed the train/test randomly on the interactions, not all 
@@ -51,6 +53,14 @@ train_df['item_id_idx'] = le_item.fit_transform(train_df['item_id'].values)
 train_user_ids = train_df['user_id'].unique()
 train_item_ids = train_df['item_id'].unique()
 
+val_df = val_df[
+  (val_df['user_id'].isin(train_user_ids)) & \
+  (val_df['item_id'].isin(train_item_ids))
+]
+
+val_df['user_id_idx'] = le_user.transform(val_df['user_id'].values)
+val_df['item_id_idx'] = le_item.transform(val_df['item_id'].values)
+
 test_df = test_df[
   (test_df['user_id'].isin(train_user_ids)) & \
   (test_df['item_id'].isin(train_item_ids))
@@ -63,6 +73,7 @@ n_users = train_df['user_id_idx'].nunique()
 n_items = train_df['item_id_idx'].nunique()
 
 number_of_nodes = n_users + n_items
+
 
 ## Minibatch Sampling
 

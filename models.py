@@ -11,14 +11,14 @@ from torch_scatter import scatter_mean, scatter_max, scatter_sum, scatter_add
 
 from dataset import *
 
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
 def retrieve_params():
     with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
         params = pickle.load(handle)
     return params
 
 params = retrieve_params()
-
-os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
 
 
 def sym_norm_adj(A):
@@ -43,13 +43,14 @@ class SheafConvLayer(nn.Module):
             output_dim (int): Dimensionality of the output softmax distribution
             edge_index (torch.Tensor): Tensor of shape (2, num_edges)
     """
-    def __init__(self, num_nodes, input_dim, output_dim, edge_index, step_size):
+    def __init__(self, input_dim, output_dim, edge_index, step_size):
         super(SheafConvLayer, self).__init__()
         #Number of nodes taken as input from SheafNN
-        if not MovieLens_100K:
-          self.num_nodes = 9640 
-        else:
-          self.num_nodes = 2489
+        self.num_nodes = number_of_nodes
+        #if not MovieLens_100K:
+          #self.num_nodes = 9640 
+        #else:
+          #self.num_nodes = 2490
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.edge_index = edge_index.to(device)
@@ -151,7 +152,7 @@ class RecSysGNN(nn.Module):
     self.model = model
     self.embedding = nn.Embedding(num_users + num_items, latent_dim)
 
-    self.convs = nn.ModuleList(SheafConvLayer(num_nodes = number_of_nodes,input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
+    self.convs = nn.ModuleList(SheafConvLayer(input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
 
     self.init_parameters()
 
@@ -171,6 +172,7 @@ class RecSysGNN(nn.Module):
       embs.append(emb)
 
     out = (torch.mean(torch.stack(embs, dim=0), dim=0))
+    #print(out)
     return emb0, out
 
 
