@@ -28,8 +28,8 @@ from datetime import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', type=int, help='Number of epochs')
-parser.add_argument('--dataset', type=str, default='ml-100k', choices = ['ml-100k', 'ml-1m'], help='Choice of the dataset')
-parser.add_argument('--K_list', nargs='+', type=int, default= [5,10,1000], help='First value of K')
+parser.add_argument('--dataset', type=str, default='ml-100k', choices = ['ml-100k', 'ml-1m','facebook', 'yahoo'], help='Choice of the dataset')
+parser.add_argument('--K_list', nargs='+', type=int, default= [1,3,5,10,20,50,100], help='First value of K')
 parser.add_argument('--wandb', type=bool, default = False, help='Choose if you want to use Wandb or not')
 parser.add_argument('--run_name', type=str, help = 'Name of the run for logging')
 parser.add_argument('--layers', type=int, help = 'Number of layers')
@@ -38,6 +38,7 @@ parser.add_argument('--gpu_id', type=str, default= '0', help = 'Id of the gpu')
 parser.add_argument('--learning_rate', default=0.001, type=float, help = 'Learning rate')
 parser.add_argument('--entity_name', default='sheaf_nn_recommenders', type=str, help = 'Entity name for shared projects in Wandb. If there is no shared project, default there is no shared project (0).')
 parser.add_argument('--project_name', default='Recommendation', type=str, help = 'Project name for Wandb')
+parser.add_argument('--model', default='sheaf', type=str, help = 'Name of the model')
 args = parser.parse_args()
 
 latent_dim = 64
@@ -50,12 +51,12 @@ LR = args.learning_rate
 K_list = args.K_list
 DATASET = args.dataset
 
-def store_params(gpu_id, dataset_name):
-    params = {'gpu_id' : gpu_id, 'dataset_name': dataset_name, 'seed': args.seed}
+def store_params(gpu_id, dataset_name, model):
+    params = {'gpu_id' : gpu_id, 'dataset_name': dataset_name, 'model': model, 'seed': args.seed}
     with open(os.getcwd() + '/params.pickle', 'wb') as handle:
         pickle.dump(params, handle)
 
-store_params(args.gpu_id, args.dataset)
+store_params(args.gpu_id, args.dataset, args.model)
 
 from dataset import *
 from models import *
@@ -77,7 +78,7 @@ if args.wandb:
 torch.manual_seed(SEED)
 device = torch.device("cuda:" + str(args.gpu_id) if torch.cuda.is_available() else "cpu")
 
-def eval(model, data_df, split_name = "val"):
+def eval(model, train_df, data_df, split_name = "val"):
     model.eval()
     with torch.no_grad():
         initial_time = datetime.now()
@@ -85,26 +86,24 @@ def eval(model, data_df, split_name = "val"):
 
         final_user_Embed, final_item_Embed = torch.split(out, (n_users, n_items))
         
-        metrics = get_metrics(
-          final_user_Embed, final_item_Embed, n_users, n_items, data_df, K_list
-        )
+        all_metrics = get_metrics(
+          final_user_Embed, final_item_Embed, n_users, n_items, train_df, data_df, K_list,
+          return_mean_values=True)
         recommendation_time = str(datetime.now() - initial_time)
-        #print(metrics)
-        #exit(-1)
 
+
+        #We have to log the metrics for each value of K.
+        #We have to log if is for train or test by using split_name
         if args.wandb:
-          wandb.log({"Recall@{}".format(K1): test_topK_recall, 
-                      "Precision@{}".format(K1): test_topK_precision,
-                      "NDGC@{}".format(K1):round(np.mean(ndgc),4),
-                      "Recall@{}".format(K2): test_topK_recall, 
-                      "Precision@{}".format(K2): test_topK_precision,
-                      "NDGC@{}".format(K2):round(np.mean(ndgc),4),
-                      "Recommendation time" : recommendation_time})
+          for k in K_list:
+             wandb.log({"{} Top Recall@{}".format(split_name, k): all_metrics[f'recall@{k}'],
+                        "{} Top Precision@{}".format(split_name, k): all_metrics[f'precision@{k}'],
+                        "{} Top NDGC@{}".format(split_name, k): all_metrics[f'ndcg@{k}'],
+                        "{} Top MRR@{}".format(split_name, k): all_metrics[f'mrr@{k}']})
 
 
 
 def train_and_eval(model, optimizer, train_df):
-  eval(model,train_df)
   '''
   model: input of the training method
   optimizer: selected optimizer, to compute the BPR loss and the evaluation metrics
@@ -115,12 +114,6 @@ def train_and_eval(model, optimizer, train_df):
   bpr_loss_list_epoch = []
   reg_loss_list_epoch = []
   
-  ndgc_list1 = []
-  ndgc_list2 = []
-  recall_list1 = []
-  precision_list1 = []
-  recall_list2 = []
-  precision_list2 = []
 
   for epoch in tqdm(range(EPOCHS)): 
       n_batch = int(len(train)/BATCH_SIZE)
@@ -148,34 +141,22 @@ def train_and_eval(model, optimizer, train_df):
           final_loss_list.append(final_loss.item())
           bpr_loss_list.append(bpr_loss.item())
           reg_loss_list.append(reg_loss.item())
+      
+      eval(model, train_df, val_df, "val") #change train_df with val_df
+      eval(model, train_df, test_df, "test")
 
       if args.wandb:
         wandb.log({"Loss":round(np.mean(final_loss_list),4)})
       
-      eval(model, val_df, "val") #change train_df with val_df
-      eval(model, test_df, "test")
       
       loss_list_epoch.append(round(np.mean(final_loss_list),4))
       bpr_loss_list_epoch.append(round(np.mean(bpr_loss_list),4))
       reg_loss_list_epoch.append(round(np.mean(reg_loss_list),4))
-      """ndgc_list1.append(round(np.mean(ndgc_1),4))
-      ndgc_list2.append(round(np.mean(ndgc_2),4))
-
-      recall_list1.append(round(test_topK_recall_1,4))
-      precision_list1.append(round(test_topK_precision_1,4))
-      recall_list2.append(round(test_topK_recall_2,4))
-      precision_list2.append(round(test_topK_precision_2,4))"""
 
   return (
     loss_list_epoch, 
     bpr_loss_list_epoch, 
     reg_loss_list_epoch, 
-    recall_list1, 
-    precision_list1,
-    ndgc_list1,
-    recall_list2, 
-    precision_list2,
-    ndgc_list2
   )
 
 
@@ -189,11 +170,7 @@ sheafnn = RecSysGNN(
 sheafnn.to(device)
 
 optimizer = torch.optim.Adam(sheafnn.parameters(), lr=LR)
-sheafnn_loss, sheafnn_bpr, sheafnn_reg, sheafnn_recall1, sheafnn_precision1, sheafnn_ndcg1, sheafnn_recall2, sheafnn_precision2, sheafnn_ndcg2 = train_and_eval(sheafnn, optimizer, train_df)
+sheafnn_loss, sheafnn_bpr, sheafnn_reg = train_and_eval(sheafnn, optimizer, train_df)
 
 if args.wandb:
-  wandb.log({"Top Recall@{}".format(K1): max(sheafnn_recall1), 
-              "Top Precision@{}".format(K1):  max(sheafnn_precision1),
-                "Top Recall@{}".format(K2): max(sheafnn_recall2), 
-              "Top Precision@{}".format(K2):  max(sheafnn_precision2),})
   wandb.finish()

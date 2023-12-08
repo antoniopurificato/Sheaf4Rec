@@ -1,17 +1,16 @@
-from torch_geometric.nn.conv import MessagePassing
 import torch
 import pickle
 import torch.nn as nn
-import os
-import torch.nn.functional as F
-import torch.optim as optim
-from torch_geometric.utils import degree
-from torch_geometric.utils import to_dense_adj
-from torch_scatter import scatter_mean, scatter_max, scatter_sum, scatter_add
+from torch_geometric.nn import GATConv
+from torch_scatter import scatter_add
 
+import sys
+sys.path.insert(0,'/home/antpur/projects/Scripts/SheafNNS_Recommender_System/competitors')
+
+from srGNN import * 
+from lightgcn import *
+from ngcf import *
 from dataset import *
-
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 def retrieve_params():
     with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
@@ -19,6 +18,7 @@ def retrieve_params():
     return params
 
 params = retrieve_params()
+device = torch.device('cuda:' + params['gpu_id'] if torch.cuda.is_available() else 'cpu')
 
 
 def sym_norm_adj(A):
@@ -47,10 +47,6 @@ class SheafConvLayer(nn.Module):
         super(SheafConvLayer, self).__init__()
         #Number of nodes taken as input from SheafNN
         self.num_nodes = number_of_nodes
-        #if not MovieLens_100K:
-          #self.num_nodes = 9640 
-        #else:
-          #self.num_nodes = 2490
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.edge_index = edge_index.to(device)
@@ -61,7 +57,7 @@ class SheafConvLayer(nn.Module):
 
         # This is only needed by our functions to compute Dirichlet energy
         # It should not be used below
-        self.adj_norm = sym_norm_adj(to_dense_adj(self.edge_index)[0])
+        #self.adj_norm = sym_norm_adj(to_dense_adj(self.edge_index)[0])
 
     def compute_left_right_map_index(self):
         """Computes indices for the full Laplacian matrix"""
@@ -139,7 +135,8 @@ class SheafConvLayer(nn.Module):
         y = self.linear(x)
         x = x - self.step_size * torch.sparse.mm(laplacian, y)
         return x
-
+    
+  
 class RecSysGNN(nn.Module):
   def __init__(
       self,
@@ -152,27 +149,39 @@ class RecSysGNN(nn.Module):
     self.model = model
     self.embedding = nn.Embedding(num_users + num_items, latent_dim)
 
-    self.convs = nn.ModuleList(SheafConvLayer(input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
+    if params['model'] == 'sheaf':
+        self.convs = nn.ModuleList(SheafConvLayer(input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
+    elif params['model'] == 'lightgcn':
+       self.convs = nn.ModuleList(LightGCNConv() for _ in range(num_layers))
+    elif params['model'] == 'ngcf':
+         self.convs = nn.ModuleList(NGCFConv(latent_dim=latent_dim, dropout=0.1) for _ in range(num_layers))
+    elif params['model'] == 'gat':
+         self.convs = nn.ModuleList(GATConv(64, 64, 1, 0.6) for _ in range(num_layers))
+    elif params['model'] == 'srgnn':
+       self.convs = nn.ModuleList(SRGNN(hidden_size=64, n_items=len(train_df)) for _ in range(num_layers))
 
     self.init_parameters()
 
 
   def init_parameters(self):
-    nn.init.normal_(self.embedding.weight, std=0.1) 
-
+    nn.init.normal_(self.embedding.weight, std=0.1)
 
   def forward(self, edge_index):
-    # My network takes as input the previously created embedding
     emb0 = self.embedding.weight
     embs = [emb0]
 
     emb = emb0
     for conv in self.convs:
-      emb = conv(x=emb)
+      if params['model'] == 'srgnn':
+          data = [emb, edge_index, ]
+          emb = conv(emb, data)
+      if params['model'] == 'sheaf':
+          emb = conv(emb)
+      elif params['model'] == 'lightgcn' or params['model'] == 'ngcf' or params['model'] == 'gat':
+          emb = conv(emb, edge_index)
       embs.append(emb)
 
     out = (torch.mean(torch.stack(embs, dim=0), dim=0))
-    #print(out)
     return emb0, out
 
 

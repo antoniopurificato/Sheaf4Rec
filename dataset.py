@@ -13,26 +13,41 @@ def retrieve_params():
 
 params = retrieve_params()
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = params['gpu_id']
-
 file_name, sep = None, None
-MovieLens_100K = params['dataset_name'] #dataset choice
+dataset = params['dataset_name'] #dataset choice
 PATH = '/home/antpur/projects/Datasets'
 device = torch.device("cuda:" + str(params['gpu_id']) if torch.cuda.is_available() else "cpu")
 
 os.chdir(PATH)
-if MovieLens_100K == 'ml-100k':
+if dataset == 'ml-100k':
   file_name = "ml-100k/u.data"
   sep = "\t"
-if MovieLens_100K == 'ml-1m':
+if dataset == 'ml-1m':
   file_name = "ml-1m/ratings.dat"
   sep = "::"
-columns_name=['user_id','item_id','rating','timestamp']
-df = pd.read_csv(file_name,sep=sep,names=columns_name, engine='python')
+if dataset == 'amazon':
+  file_name = "Books_rating.csv"
+  sep = "\t"
+if dataset == 'facebook':
+  file_name = "dataset_facebook.tsv"
+  sep = "\t"
+if dataset == 'yahoo':
+  file_name = "dataset_yahoo.tsv"
+  sep = "\t"
+if dataset != 'facebook' and dataset != 'yahoo':
+  columns_name=['user_id','item_id','rating','timestamp']
+  df = pd.read_csv(file_name,sep=sep,names=columns_name, engine='python')
+else:
+   columns_name=['user_id','item_id','rating']
+   df = pd.read_csv(file_name,sep=sep, names=columns_name, engine='python')
+   #new_columns_name= {'Id':'item_id','User_id':'user_id','review/score':'rating','review/time':'timestamp'}
+   #df.rename(columns=new_columns_name, inplace=True)
+   #df = df[['user_id','item_id','rating','timestamp']]
 
 #I only want to use high ratings as interactions 
 #in order to predict which movies a user will enjoy watching next.
-df = df[df['rating']>=3]
+if not dataset == 'facebook':
+  df = df[df['rating']>=3]
 
 #80/10/10 train-val-test split.
 train, test = train_test_split(df.values, test_size=0.2, random_state=params['seed'])
@@ -40,7 +55,6 @@ val, test = train_test_split(test, test_size=0.5, random_state=params['seed'])
 train_df = pd.DataFrame(train, columns=df.columns)
 val_df = pd.DataFrame(val, columns=df.columns)
 test_df = pd.DataFrame(test, columns=df.columns)
-
 #Since I performed the train/test randomly on the interactions, not all 
 #users and items may be present in the training set. I will relabel all of 
 #users and items to ensure the highest label is the number of users and items.
