@@ -7,7 +7,6 @@ from torch_scatter import scatter_add
 import sys
 sys.path.insert(0,'/home/antpur/projects/Scripts/SheafNNS_Recommender_System/competitors')
 
-from srGNN import * 
 from lightgcn import *
 from ngcf import *
 from dataset import *
@@ -43,7 +42,7 @@ class SheafConvLayer(nn.Module):
             output_dim (int): Dimensionality of the output softmax distribution
             edge_index (torch.Tensor): Tensor of shape (2, num_edges)
     """
-    def __init__(self, input_dim, output_dim, edge_index, step_size):
+    def __init__(self, input_dim, output_dim, edge_index, step_size, latent_dim):
         super(SheafConvLayer, self).__init__()
         #Number of nodes taken as input from SheafNN
         self.num_nodes = number_of_nodes
@@ -51,8 +50,8 @@ class SheafConvLayer(nn.Module):
         self.output_dim = output_dim
         self.edge_index = edge_index.to(device)
         self.step_size = step_size
-        self.linear = nn.Linear(64, 64)
-        self.sheaf_learner = nn.Linear(128, 1, bias=False)
+        self.linear = nn.Linear(latent_dim, latent_dim)
+        self.sheaf_learner = nn.Linear(2 * latent_dim, 1, bias=False)
         self.left_idx, self.right_idx = self.compute_left_right_map_index()
 
         # This is only needed by our functions to compute Dirichlet energy
@@ -150,15 +149,13 @@ class RecSysGNN(nn.Module):
     self.embedding = nn.Embedding(num_users + num_items, latent_dim)
 
     if params['model'] == 'sheaf':
-        self.convs = nn.ModuleList(SheafConvLayer(input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index) for _ in range(num_layers))
+        self.convs = nn.ModuleList(SheafConvLayer(input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index, latent_dim=latent_dim) for _ in range(num_layers))
     elif params['model'] == 'lightgcn':
        self.convs = nn.ModuleList(LightGCNConv() for _ in range(num_layers))
     elif params['model'] == 'ngcf':
          self.convs = nn.ModuleList(NGCFConv(latent_dim=latent_dim, dropout=0.1) for _ in range(num_layers))
     elif params['model'] == 'gat':
-         self.convs = nn.ModuleList(GATConv(64, 64, 1, 0.6) for _ in range(num_layers))
-    elif params['model'] == 'srgnn':
-       self.convs = nn.ModuleList(SRGNN(hidden_size=64, n_items=len(train_df)) for _ in range(num_layers))
+         self.convs = nn.ModuleList(GATConv(latent_dim, latent_dim, 1, 0.6) for _ in range(num_layers))
 
     self.init_parameters()
 

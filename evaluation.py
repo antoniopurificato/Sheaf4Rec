@@ -93,7 +93,7 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, mask_data, dat
       mrr.append(app)
     metrics_df[f'ndcg@{K}'] = ndcg
     metrics_df[f'mrr@{K}'] = mrr
-  metrics_df.to_csv(os.getcwd() + "/../Scripts/SheafNNS_Recommender_System/metrics.csv")
+  metrics_df.to_csv(os.getcwd() + "/../Scripts/SheafNNS_Recommender_System/predictions/metrics_" + str(params['run_name']) + ".csv")
   if return_mean_values:
     all_metrics = {}
     for K in K_list:

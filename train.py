@@ -52,7 +52,8 @@ K_list = args.K_list
 DATASET = args.dataset
 
 def store_params(gpu_id, dataset_name, model):
-    params = {'gpu_id' : gpu_id, 'dataset_name': dataset_name, 'model': model, 'seed': args.seed}
+    params = {'gpu_id' : gpu_id, 'dataset_name': dataset_name, 'model': model, 'seed': args.seed,
+              'run_name' : args.run_name}
     with open(os.getcwd() + '/params.pickle', 'wb') as handle:
         pickle.dump(params, handle)
 
@@ -94,10 +95,17 @@ def eval(model, train_df, data_df, split_name = "val"):
 
         #We have to log the metrics for each value of K.
         #We have to log if is for train or test by using split_name
+        
         if args.wandb:
           for k in K_list:
+             den = all_metrics[f'precision@{k}'] + all_metrics[f'recall@{k}']
+             if den != 0:
+                f1 = 2 * all_metrics[f'precision@{k}'] * all_metrics[f'recall@{k}'] / den
+             else:
+                f1 = 0 
              wandb.log({"{} Top Recall@{}".format(split_name, k): all_metrics[f'recall@{k}'],
                         "{} Top Precision@{}".format(split_name, k): all_metrics[f'precision@{k}'],
+                        "{} Top F1@{}".format(split_name, k): f1,
                         "{} Top NDGC@{}".format(split_name, k): all_metrics[f'ndcg@{k}'],
                         "{} Top MRR@{}".format(split_name, k): all_metrics[f'mrr@{k}']})
 
