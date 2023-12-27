@@ -38,10 +38,10 @@ def precision_and_recall(y_pred, y_true):
    return num / len(y_pred), num / len(y_true)
 
 
-def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, mask_data, data, K_list, return_mean_values=False):
+def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, mask_data, data, K_list, return_mean_values=False, log_metrics=False, device='cpu'):
   #test_user_ids = torch.LongTensor(data['user_id_idx'].unique())
   # compute the score of all user-item pairs
-  relevance_score = torch.matmul(user_Embed_wts, torch.transpose(item_Embed_wts,0, 1))
+  relevance_score = torch.matmul(user_Embed_wts.to(device), torch.transpose(item_Embed_wts.to(device),0, 1).to(device))
 
   # create dense tensor of all user-item interactions
   i = torch.stack((
@@ -93,7 +93,10 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, mask_data, dat
       mrr.append(app)
     metrics_df[f'ndcg@{K}'] = ndcg
     metrics_df[f'mrr@{K}'] = mrr
-  metrics_df.to_csv(os.getcwd() + "/../Scripts/SheafNNS_Recommender_System/predictions/metrics_" + str(params['run_name']) + ".csv")
+  
+  if log_metrics:
+    metrics_df.to_csv(os.getcwd() + "/../Scripts/SheafNNS_Recommender_System/predictions/metrics_" + str(params['run_name']) + ".csv")
+  
   if return_mean_values:
     all_metrics = {}
     for K in K_list:

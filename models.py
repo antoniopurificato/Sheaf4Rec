@@ -137,6 +137,7 @@ class SheafConvLayer(nn.Module):
     
   
 class RecSysGNN(nn.Module):
+  #TODO rimuovere tutti i params['model'] e usare self.model modificando anche train.py 
   def __init__(
       self,
       latent_dim, 
@@ -145,7 +146,6 @@ class RecSysGNN(nn.Module):
       num_items,
       model):
     super(RecSysGNN, self).__init__()
-    self.model = model
     self.embedding = nn.Embedding(num_users + num_items, latent_dim)
 
     if params['model'] == 'sheaf':
@@ -178,7 +178,7 @@ class RecSysGNN(nn.Module):
           emb = conv(emb, edge_index)
       embs.append(emb)
 
-    out = (torch.mean(torch.stack(embs, dim=0), dim=0))
+    out = torch.concat(embs, dim=-1)#(torch.mean(torch.stack(embs, dim=0), dim=0))
     return emb0, out
 
 
