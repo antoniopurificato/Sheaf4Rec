@@ -5,14 +5,16 @@ from torch_geometric.nn import GATConv
 from torch_scatter import scatter_add
 
 import sys
-sys.path.insert(0,'/home/antpur/projects/Scripts/SheafNNS_Recommender_System/competitors')
+import os
+from competitors import lightgcn, ngcf
+#sys.path.insert(0,os.getcwd() + '/competitors')
 
-from lightgcn import *
-from ngcf import *
+#from lightgcn import *
+#from ngcf import *
 from dataset import *
 
 def retrieve_params():
-    with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
+    with open(os.getcwd() + '/params.pickle', 'rb') as handle:
         params = pickle.load(handle)
     return params
 
@@ -137,7 +139,6 @@ class SheafConvLayer(nn.Module):
     
   
 class RecSysGNN(nn.Module):
-  #TODO rimuovere tutti i params['model'] e usare self.model modificando anche train.py 
   def __init__(
       self,
       latent_dim, 
@@ -147,14 +148,15 @@ class RecSysGNN(nn.Module):
       model):
     super(RecSysGNN, self).__init__()
     self.embedding = nn.Embedding(num_users + num_items, latent_dim)
+    self.model = model
 
-    if params['model'] == 'sheaf':
+    if self.model == 'sheaf':
         self.convs = nn.ModuleList(SheafConvLayer(input_dim=len(train_df),output_dim=7, step_size=1.0, edge_index=train_edge_index, latent_dim=latent_dim) for _ in range(num_layers))
-    elif params['model'] == 'lightgcn':
+    elif self.model == 'lightgcn':
        self.convs = nn.ModuleList(LightGCNConv() for _ in range(num_layers))
-    elif params['model'] == 'ngcf':
+    elif self.model == 'ngcf':
          self.convs = nn.ModuleList(NGCFConv(latent_dim=latent_dim, dropout=0.1) for _ in range(num_layers))
-    elif params['model'] == 'gat':
+    elif self.model == 'gat':
          self.convs = nn.ModuleList(GATConv(latent_dim, latent_dim, 1, 0.6) for _ in range(num_layers))
 
     self.init_parameters()
@@ -169,16 +171,19 @@ class RecSysGNN(nn.Module):
 
     emb = emb0
     for conv in self.convs:
-      if params['model'] == 'srgnn':
+      if self.model == 'srgnn':
           data = [emb, edge_index, ]
           emb = conv(emb, data)
-      if params['model'] == 'sheaf':
+      if self.model == 'sheaf':
           emb = conv(emb)
-      elif params['model'] == 'lightgcn' or params['model'] == 'ngcf' or params['model'] == 'gat':
+      elif self.model == 'lightgcn' or self.model == 'ngcf' or self.model == 'gat':
           emb = conv(emb, edge_index)
       embs.append(emb)
 
-    out = torch.concat(embs, dim=-1)#(torch.mean(torch.stack(embs, dim=0), dim=0))
+    if self.model == 'sheaf':
+        out = torch.concat(embs, dim=-1)
+    else:
+        out = (torch.mean(torch.stack(embs, dim=0), dim=0))
     return emb0, out
 
 

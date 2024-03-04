@@ -7,7 +7,7 @@ import random
 import pickle
 
 def retrieve_params():
-    with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
+    with open(os.getcwd() + '/params.pickle', 'rb') as handle:
         params = pickle.load(handle)
     return params
 
@@ -15,24 +15,24 @@ params = retrieve_params()
 
 file_name, sep = None, None
 dataset = params['dataset_name'] #dataset choice
-PATH = '/home/antpur/projects/Datasets'
+PATH = os.getcwd() + '/data/'#'/home/antpur/projects/Datasets'
 device = torch.device("cuda:" + str(params['gpu_id']) if torch.cuda.is_available() else "cpu")
 
-os.chdir(PATH)
+#os.chdir(PATH)
 if dataset == 'ml-100k':
-  file_name = "ml-100k/u.data"
+  file_name = PATH + "ml-100k/u.data"
   sep = "\t"
 if dataset == 'ml-1m':
-  file_name = "ml-1m/ratings.dat"
+  file_name = PATH + "ml-1m/ratings.dat"
   sep = "::"
 if dataset == 'amazon':
-  file_name = "Books_rating.csv"
+  file_name = PATH + "Books_rating.csv"
   sep = "\t"
 if dataset == 'facebook':
-  file_name = "dataset_facebook.tsv"
+  file_name = PATH + "dataset_facebook.tsv"
   sep = "\t"
 if dataset == 'yahoo':
-  file_name = "dataset_yahoo.tsv"
+  file_name = PATH + "dataset_yahoo.tsv"
   sep = "\t"
 if dataset != 'facebook' and dataset != 'yahoo':
   columns_name=['user_id','item_id','rating','timestamp']

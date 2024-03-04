@@ -7,15 +7,11 @@ import numpy as np
 import pickle
 
 def retrieve_params():
-    with open('/home/antpur/projects/Scripts/SheafNNS_Recommender_System/params.pickle', 'rb') as handle:
+    with open(os.getcwd() + '/params.pickle', 'rb') as handle:
         params = pickle.load(handle)
     return params
 
 params = retrieve_params()
-
-def red_print(*args):
-  for arg in args:
-    print("\033[91m" + str(arg) + "\033[0m", end=' ')
 
 def compute_bpr_loss(users, users_emb, pos_emb, neg_emb, user_emb0,  pos_emb0, neg_emb0):
   # compute loss from initial embeddings, used for regulization
@@ -95,7 +91,7 @@ def get_metrics(user_Embed_wts, item_Embed_wts, n_users, n_items, mask_data, dat
     metrics_df[f'mrr@{K}'] = mrr
   
   if log_metrics:
-    metrics_df.to_csv(os.getcwd() + "/../Scripts/SheafNNS_Recommender_System/predictions/metrics_" + str(params['run_name']) + ".csv")
+    metrics_df.to_csv(os.getcwd() + "/../predictions/metrics_" + str(params['run_name']) + ".csv")
   
   if return_mean_values:
     all_metrics = {}

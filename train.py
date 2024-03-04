@@ -39,10 +39,11 @@ parser.add_argument('--learning_rate', default=0.001, type=float, help = 'Learni
 parser.add_argument('--entity_name', default='sheaf_nn_recommenders', type=str, help = 'Entity name for shared projects in Wandb. If there is no shared project, default there is no shared project (0).')
 parser.add_argument('--project_name', default='Recommendation', type=str, help = 'Project name for Wandb')
 parser.add_argument('--model', default='sheaf', type=str, help = 'Name of the model')
-parser.add_argument('--log_metrics', default=False, type=bool, help = 'Log for statistical tests')
+parser.add_argument('--log_metrics', type=bool, default=False, help = 'Log for statistical tests')
+parser.add_argument('--latent_dim', type=int, default=64, help = 'Number of latent dimensions')
 args = parser.parse_args()
 
-latent_dim = 64
+latent_dim = args.latent_dim
 n_layers = args.layers
 EPOCHS = args.epochs
 SEED = args.seed
@@ -83,7 +84,6 @@ device = torch.device("cuda:" + str(args.gpu_id) if torch.cuda.is_available() el
 def eval(model, train_df, data_df, split_name = "val"):
     model.eval()
     with torch.no_grad():
-        initial_time = datetime.now()
         _, out = model(train_edge_index)
 
         final_user_Embed, final_item_Embed = torch.split(out, (n_users, n_items))
@@ -91,7 +91,6 @@ def eval(model, train_df, data_df, split_name = "val"):
         all_metrics = get_metrics(
           final_user_Embed, final_item_Embed, n_users, n_items, train_df, data_df, K_list,
           return_mean_values=True, log_metrics=args.log_metrics, device=device)
-        recommendation_time = str(datetime.now() - initial_time)
 
 
         #We have to log the metrics for each value of K.
@@ -151,7 +150,7 @@ def train_and_eval(model, optimizer, train_df):
           bpr_loss_list.append(bpr_loss.item())
           reg_loss_list.append(reg_loss.item())
       
-      eval(model, train_df, val_df, "val") #change train_df with val_df
+      eval(model, train_df, val_df, "val") 
       eval(model, train_df, test_df, "test")
 
       if args.wandb:
@@ -174,12 +173,10 @@ sheafnn = RecSysGNN(
   num_layers=n_layers,
   num_users=n_users,
   num_items=n_items,
-  model='Sheaf'
+  model='sheaf'
 )
 sheafnn.to(device)
-
 optimizer = torch.optim.Adam(sheafnn.parameters(), lr=LR)
 sheafnn_loss, sheafnn_bpr, sheafnn_reg = train_and_eval(sheafnn, optimizer, train_df)
-
 if args.wandb:
   wandb.finish()
