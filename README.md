@@ -1,7 +1,6 @@
 # Sheaf4Rec: Sheaf Neural Networks for Graph-based Recommender Systems
-In this work, we propose a solution integrating a cutting-edge model inspired by category theory: Sheaf Neural Networks (SNN).
-This versatile method can be applied to various graph-related tasks and exhibits unparalleled performance. Our approach outperforms traditional baseline techniques on F1-Score@10, achieving improvements of 5.5% on MovieLens 100K, 5.8% on MovieLens 1M, and 2.8% in terms of Recall@100 on
-Book-Crossing for collaborative filtering.
+In this work, we propose a solution integrating a cutting-edge model inspired by category theory: Sheaf4Rec.
+Our approach takes advantage from sheaf theory and results in a more comprehensive representation that can be effectively exploited during inference. Our proposed model exhibits a noteworthy relative improvement of up to 8.53% on F1-Score@10 and an impressive increase of up to 11.29% on NDCG@10, outperforming existing state-of-the-art models such as NGCF, KGTORe and other recently developed GNN-based models. Sheaf4Rec shows remarkable improvements in terms of efficiency: we observe substantial runtime improvements ranging from 2.5% up to 37% when compared to other GNN-based competitor models.
 
 All the code is written in Python and is based on Pytorch, Pytorch Geometric and the use of Wandb for logging purposes. 
 
@@ -54,7 +53,6 @@ python3 train.py --epochs [NUMBER OF EPOCHS] --dataset [DATASET NAME] --K_list [
 You can use this command line to have a first simple run:
 ```
 python train.py --epochs 100 --dataset yahoo --run_name Example_run_name --layers 5 --gpu_id 1 --model sheaf
-
 ```
 
 Remember that to run this code it is necessary to use Wandb.
